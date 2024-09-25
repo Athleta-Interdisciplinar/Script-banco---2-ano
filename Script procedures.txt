@@ -1,0 +1,392 @@
+-- Primeira procedure
+CREATE OR REPLACE PROCEDURE inserir_usuario_e_interesse(
+    nome VARCHAR,
+    email VARCHAR,
+    senha VARCHAR,
+    dt_nasc DATE,
+    interesse VARCHAR DEFAULT 'Nenhum',
+    bio VARCHAR DEFAULT ' '
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Inserir usuário na tabela Usuario
+    INSERT INTO Usuario(nome, email, senha, dt_nasc)
+    VALUES (nome, email, senha, dt_nasc);
+    
+    -- Vincular interesse ao usuário recém-criado
+    INSERT INTO Usuario_Interesse(id_usuario, interesse, bio)
+    VALUES (currval('usuario_id_usuario_seq'), interesse, bio);
+END;
+$$;
+
+-- Segunda Procedure
+CREATE OR REPLACE PROCEDURE inserir_anuncio_e_notificacao(
+    preco FLOAT,
+    descricao VARCHAR,
+    nome VARCHAR,
+    quant INT,
+    id_usuario INT ,
+    id_estado INT ,
+    tipo_notificacao VARCHAR,
+    conteudo VARCHAR
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Inserir o anúncio na tabela Anuncio
+    INSERT INTO Anuncio(preco, descricao, nome, quant, id_usuario, id_estado)
+    VALUES (preco, descricao, nome, quant, id_usuario, id_estado);
+    
+    -- Criar uma notificação para o usuário
+    INSERT INTO Notificacao(tipo, dt_notificacao, conteudo, id_usuario)
+    VALUES (tipo_notificacao, CURRENT_DATE, conteudo, id_usuario);
+END;
+$$;
+
+-- Terceira Procedure
+CREATE OR REPLACE PROCEDURE inserir_evento_com_centro_esportivo(
+    nome_evento VARCHAR,
+    descricao_evento VARCHAR,
+    dt_evento DATE,
+    organizador INT,
+    img VARCHAR,
+    id_local INT,
+    nome_centro VARCHAR,
+    telefone VARCHAR,
+    descricao_centro VARCHAR
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Inserir o evento na tabela Evento
+    INSERT INTO Evento(nome, descricao, dt_evento, organizador, img, id_local)
+    VALUES (nome_evento, descricao_evento, dt_evento, organizador, img, id_local);
+    
+    -- Associar o evento a um centro esportivo
+    INSERT INTO Centro_Esportivo(nome, telefone, descricao, id_local)
+    VALUES (nome_centro, telefone, descricao_centro, id_local);
+END;
+$$;
+
+-- Tabela de log 
+-- Tabela de Log para Usuario
+CREATE TABLE Log_Usuario (
+    log_id serial PRIMARY KEY,
+    id_usuario INT,
+    nome VARCHAR(40),
+    email VARCHAR(60),
+    senha VARCHAR(20),
+    dt_nasc DATE,
+    operacao VARCHAR(10),
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de Log para Anuncio
+CREATE TABLE Log_Anuncio (
+    log_id serial PRIMARY KEY,
+    id_anuncio INT,
+    preco FLOAT,
+    descricao VARCHAR(300),
+    nome VARCHAR(40),
+    quant INT,
+    id_usuario INT,
+    id_estado INT,
+    operacao VARCHAR(10),
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de Log para Evento
+CREATE TABLE Log_Evento (
+    log_id serial PRIMARY KEY,
+    id_evento INT,
+    nome VARCHAR(40),
+    descricao VARCHAR(300),
+    dt_evento DATE,
+    organizador INT,
+    img VARCHAR(200),
+    id_local INT,
+    operacao VARCHAR(10),
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Trigger para a tabela Usuario
+CREATE OR REPLACE FUNCTION log_usuario()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO Log_Usuario(id_usuario, nome, email, senha, dt_nasc, operacao)
+        VALUES (NEW.id_usuario, NEW.nome, NEW.email, NEW.senha, NEW.dt_nasc, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO Log_Usuario(id_usuario, nome, email, senha, dt_nasc, operacao)
+        VALUES (NEW.id_usuario, NEW.nome, NEW.email, NEW.senha, NEW.dt_nasc, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO Log_Usuario(id_usuario, nome, email, senha, dt_nasc, operacao)
+        VALUES (OLD.id_usuario, OLD.nome, OLD.email, OLD.senha, OLD.dt_nasc, TG_OP);
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER usuario_log_trigger
+AFTER INSERT OR UPDATE OR DELETE ON Usuario
+FOR EACH ROW EXECUTE FUNCTION log_usuario();
+
+-- Trigger para a tabela Anuncio
+CREATE OR REPLACE FUNCTION log_anuncio()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO Log_Anuncio(id_anuncio, preco, descricao, nome, quant, id_usuario, id_estado, operacao)
+        VALUES (NEW.id_anuncio, NEW.preco, NEW.descricao, NEW.nome, NEW.quant, NEW.id_usuario, NEW.id_estado, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO Log_Anuncio(id_anuncio, preco, descricao, nome, quant, id_usuario, id_estado, operacao)
+        VALUES (NEW.id_anuncio, NEW.preco, NEW.descricao, NEW.nome, NEW.quant, NEW.id_usuario, NEW.id_estado, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO Log_Anuncio(id_anuncio, preco, descricao, nome, quant, id_usuario, id_estado, operacao)
+        VALUES (OLD.id_anuncio, OLD.preco, OLD.descricao, OLD.nome, OLD.quant, OLD.id_usuario, OLD.id_estado, TG_OP);
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER anuncio_log_trigger
+AFTER INSERT OR UPDATE OR DELETE ON Anuncio
+FOR EACH ROW EXECUTE FUNCTION log_anuncio();
+
+-- Trigger para a tabela Evento
+CREATE OR REPLACE FUNCTION log_evento()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO Log_Evento(id_evento, nome, descricao, dt_evento, organizador, img, id_local, operacao)
+        VALUES (NEW.id_evento, NEW.nome, NEW.descricao, NEW.dt_evento, NEW.organizador, NEW.img, NEW.id_local, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO Log_Evento(id_evento, nome, descricao, dt_evento, organizador, img, id_local, operacao)
+        VALUES (NEW.id_evento, NEW.nome, NEW.descricao, NEW.dt_evento, NEW.organizador, NEW.img, NEW.id_local, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO Log_Evento(id_evento, nome, descricao, dt_evento, organizador, img, id_local, operacao)
+        VALUES (OLD.id_evento, OLD.nome, OLD.descricao, OLD.dt_evento, OLD.organizador, OLD.img, OLD.id_local, TG_OP);
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER evento_log_trigger
+AFTER INSERT OR UPDATE OR DELETE ON Evento
+FOR EACH ROW EXECUTE FUNCTION log_evento();
+
+-- Outra: Trigger para Atualizar a Quantidade de Produtos em Anúncio
+CREATE OR REPLACE FUNCTION atualizar_quantidade_anuncio()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF (TG_OP = 'UPDATE') THEN
+        IF NEW.quant < OLD.quant THEN
+            RAISE NOTICE 'Quantidade de produtos reduzida no anúncio %', OLD.id_anuncio;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_atualizar_quantidade_anuncio
+BEFORE UPDATE ON Anuncio
+FOR EACH ROW
+EXECUTE FUNCTION atualizar_quantidade_anuncio();
+
+
+CREATE TABLE Log_Postagem (
+    log_id serial PRIMARY KEY,
+    id_postagem INT,
+    texto VARCHAR(200),
+    dt_postagem DATE,
+    id_usuario INT,
+    imagem VARCHAR(200),
+    operacao VARCHAR(10),
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION log_postagem()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO Log_Postagem(id_postagem, texto, dt_postagem, id_usuario, imagem, operacao)
+        VALUES (NEW.id_postagem, NEW.texto, NEW.dt_postagem, NEW.id_usuario, NEW.imagem, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO Log_Postagem(id_postagem, texto, dt_postagem, id_usuario, imagem, operacao)
+        VALUES (NEW.id_postagem, NEW.texto, NEW.dt_postagem, NEW.id_usuario, NEW.imagem, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO Log_Postagem(id_postagem, texto, dt_postagem, id_usuario, imagem, operacao)
+        VALUES (OLD.id_postagem, OLD.texto, OLD.dt_postagem, OLD.id_usuario, OLD.imagem, TG_OP);
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER postagem_log_trigger
+AFTER INSERT OR UPDATE OR DELETE ON Postagem
+FOR EACH ROW EXECUTE FUNCTION log_postagem();
+
+
+CREATE TABLE Log_Forum (
+    log_id serial PRIMARY KEY,
+    id_forum INT,
+    nome VARCHAR(40),
+    descricao VARCHAR(300),
+    usuario_resp VARCHAR(40),
+    id_usuario INT,
+    img_fundo VARCHAR(200),
+    operacao VARCHAR(10),
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION log_forum()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO Log_Forum(id_forum, nome, descricao, usuario_resp, id_usuario, img_fundo, operacao)
+        VALUES (NEW.id_forum, NEW.nome, NEW.descricao, NEW.usuario_resp, NEW.id_usuario, NEW.img_fundo, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO Log_Forum(id_forum, nome, descricao, usuario_resp, id_usuario, img_fundo, operacao)
+        VALUES (NEW.id_forum, NEW.nome, NEW.descricao, NEW.usuario_resp, NEW.id_usuario, NEW.img_fundo, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO Log_Forum(id_forum, nome, descricao, usuario_resp, id_usuario, img_fundo, operacao)
+        VALUES (OLD.id_forum, OLD.nome, OLD.descricao, OLD.usuario_resp, OLD.id_usuario, OLD.img_fundo, TG_OP);
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER forum_log_trigger
+AFTER INSERT OR UPDATE OR DELETE ON Forum
+FOR EACH ROW EXECUTE FUNCTION log_forum();
+
+CREATE TABLE Log_Esporte_Centro_Esportivo (
+    log_id serial PRIMARY KEY,
+    id_esporte_centro INT,
+    id_esporte INT,
+    id_centro INT,
+    operacao VARCHAR(10),
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE OR REPLACE FUNCTION log_esporte_centro_esportivo()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO Log_Esporte_Centro_Esportivo(id_esporte_centro, id_esporte, id_centro, operacao)
+        VALUES (NEW.id_esporte_centro, NEW.id_esporte, NEW.id_centro, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO Log_Esporte_Centro_Esportivo(id_esporte_centro, id_esporte, id_centro, operacao)
+        VALUES (NEW.id_esporte_centro, NEW.id_esporte, NEW.id_centro, TG_OP);
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO Log_Esporte_Centro_Esportivo(id_esporte_centro, id_esporte, id_centro, operacao)
+        VALUES (OLD.id_esporte_centro, OLD.id_esporte, OLD.id_centro, TG_OP);
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER esporte_centro_log_trigger
+AFTER INSERT OR UPDATE OR DELETE ON Esporte_Centro_Esportivo
+FOR EACH ROW EXECUTE FUNCTION log_esporte_centro_esportivo();
+
+
+CREATE TABLE Contagem_Seguidores (
+    id_usuario INT PRIMARY KEY REFERENCES Usuario(id_usuario),
+    total_seguidores INT DEFAULT 0
+);
+
+
+CREATE OR REPLACE FUNCTION atualizar_contagem_seguidores()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        UPDATE Contagem_Seguidores
+        SET total_seguidores = total_seguidores + 1
+        WHERE id_usuario = NEW.id_usuario_seguido;
+
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE Contagem_Seguidores
+        SET total_seguidores = total_seguidores - 1
+        WHERE id_usuario = OLD.id_usuario_seguido;
+
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER trigger_atualizar_contagem_seguidores
+AFTER INSERT OR DELETE ON Relacionamento_Usuario
+FOR EACH ROW EXECUTE FUNCTION atualizar_contagem_seguidores();
+
+
+CREATE OR REPLACE PROCEDURE notificar_evento_novo(id_evento INT, organizador INT)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    usuario_seguidor INT;
+BEGIN
+    -- Para cada usuário que segue o organizador, cria uma notificação
+    FOR usuario_seguidor IN 
+        SELECT id_usuario_seguidor FROM Relacionamento_Usuario WHERE id_usuario_seguido = organizador
+    LOOP
+        INSERT INTO Notificacao(tipo, dt_notificacao, conteudo, id_usuario)
+        VALUES ('Novo Evento', CURRENT_DATE, 'O organizador que você segue criou um novo evento.', usuario_seguidor);
+    END LOOP;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION trigger_notificar_evento_novo()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Chama a procedure para enviar notificações quando um novo evento é inserido
+    CALL notificar_evento_novo(NEW.id_evento, NEW.organizador);
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_evento_notificacao
+AFTER INSERT ON Evento
+FOR EACH ROW EXECUTE FUNCTION trigger_notificar_evento_novo();
+
