@@ -1,0 +1,107 @@
+CREATE TABLE Usuario (
+id_usuario serial PRIMARY KEY,
+nome VARCHAR(40) NOT NULL,
+email VARCHAR(60) NOT NULL UNIQUE,
+senha VARCHAR(20) NOT NULL CONSTRAINT chk_senha_valida
+CHECK (LENGTH(senha) >= 10 AND senha ~ '[A-Z]' AND senha ~ '[0-9]'),
+dt_nasc DATE NOT NULL CONSTRAINT chk_idade_minima
+CHECK (AGE(CURRENT_DATE, dt_nasc) >= INTERVAL '13 years')
+);
+
+CREATE TABLE Usuario_Interesse (
+id_usuario serial REFERENCES Usuario(id_usuario),
+interesse VARCHAR(200) DEFAULT 'Nenhum',
+bio VARCHAR(300) DEFAULT ' '
+);
+
+CREATE TABLE Relacionamento_Usuario (
+id_usuario_seguidor serial REFERENCES Usuario(id_usuario),
+id_usuario_seguido serial REFERENCES Usuario(id_usuario)
+);
+
+CREATE TABLE Estado (
+id_estado serial PRIMARY KEY,
+nome VARCHAR(40) NOT NULL
+);
+
+CREATE TABLE Anuncio (
+id_anuncio serial PRIMARY KEY,
+preco FLOAT NOT NULL,
+descricao VARCHAR(300),
+nome VARCHAR(40) NOT NULL,
+quant INT,
+id_usuario serial REFERENCES Usuario(id_usuario),
+id_estado serial REFERENCES Estado(id_estado)
+);
+
+CREATE TABLE Notificacao (
+id_notificacao serial PRIMARY KEY,
+tipo VARCHAR(20),
+dt_notificacao DATE,
+conteudo VARCHAR(200),
+id_usuario serial REFERENCES Usuario(id_usuario)
+);
+
+CREATE TABLE Evento (
+id_evento serial PRIMARY KEY,
+nome VARCHAR(40) NOT NULL,
+descricao VARCHAR(300),
+dt_evento DATE,
+organizador INT REFERENCES Usuario(id_usuario),
+img VARCHAR(200),
+id_local serial REFERENCES Local(id_local)
+);
+
+CREATE TABLE Local ( 
+id_local serial PRIMARY KEY,
+num INT,
+rua VARCHAR(100) NOT NULL,
+cidade VARCHAR(50) NOT NULL,
+coordenada VARCHAR(30),
+cep INT,
+id_estado serial REFERENCES Estado(id_estado)
+);
+
+CREATE TABLE Centro_Esportivo (
+id_centro serial PRIMARY KEY,
+nome VARCHAR(40) NOT NULL,
+telefone VARCHAR(20),
+descricao VARCHAR(300) DEFAULT ' ',
+id_local serial REFERENCES Local(id_local)
+);
+
+CREATE TABLE Esporte_Centro_Esportivo (
+id_esporte_centro serial PRIMARY KEY,
+id_esporte serial REFERENCES Esporte(id_esporte),
+id_centro serial REFERENCES Centro_Esportivo(id_centro)
+);
+
+CREATE TABLE Esporte (
+id_esporte serial PRIMARY KEY,
+nome VARCHAR(40) NOT NULL,
+descricao VARCHAR(300) DEFAULT ' ',
+como_pratica TEXT NOT NULL
+);
+
+CREATE TABLE Postagem (
+id_postagem serial PRIMARY KEY,
+texto VARCHAR(200) DEFAULT ' ',
+dt_postagem DATE,
+id_usuario serial REFERENCES Usuario(id_usuario),
+imagem VARCHAR(200)
+);
+
+CREATE TABLE Forum (
+id_forum serial PRIMARY KEY,
+nome VARCHAR(40) NOT NULL,
+descricao VARCHAR(300) DEFAULT ' ',
+usuario_resp varchar(40) REFERENCES Usuario(nome),
+id_usuario serial REFERENCES Usuario(id_usuario),
+img_fundo VARCHAR(200)
+);
+
+CREATE TABLE Forum_Postagem (
+id_forum_postagem serial PRIMARY KEY,
+id_forum serial REFERENCES Forum(id_forum),
+id_postagem serial REFERENCES Postagem(id_postagem)
+);
