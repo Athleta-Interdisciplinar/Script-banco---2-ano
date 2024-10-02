@@ -105,3 +105,13 @@ id_forum_postagem serial PRIMARY KEY,
 id_forum serial REFERENCES Forum(id_forum),
 id_postagem serial REFERENCES Postagem(id_postagem)
 );
+
+CREATE TABLE Evento (
+id_evento serial PRIMARY KEY,
+nome VARCHAR(40) NOT NULL,
+descricao VARCHAR(300),
+dt_evento DATE,
+organizador INT REFERENCES Usuario(id_usuario),
+img VARCHAR(200),
+id_local serial REFERENCES Local(id_local)
+);
