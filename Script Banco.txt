@@ -115,3 +115,33 @@ organizador INT REFERENCES Usuario(id_usuario),
 img VARCHAR(200),
 id_local serial REFERENCES Local(id_local)
 );
+
+
+CREATE TABLE ADM (
+    id serial PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    senha VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE Evento_Analise
+( 
+ id_evento_analise serial PRIMARY KEY,  
+ nome VARCHAR(40) NOT NULL,  
+ descricao VARCHAR(300) default ' ',  
+ dt_evento DATE default current_date,  
+ organizador VARCHAR(40) NOT NULL,
+ status VARCHAR(20) NOT NULL CONSTRAINT status_evento
+    CHECK (status IN ('Aprovado', 'Em Análise', 'Reprovado')),
+ id_local INT,
+ id_usuario INT
+);
+
+CREATE TABLE Filtros
+(
+ id_filtros serial PRIMARY KEY,
+ categoria VARCHAR(30) NOT NULL,
+ id_anuncio INT
+);
+
+ALTER TABLE Evento_Analise ADD COLUMN enviado BOOLEAN DEFAULT FALSE;
