@@ -30,6 +30,7 @@ preco FLOAT NOT NULL,
 descricao VARCHAR(300),
 nome VARCHAR(40) NOT NULL,
 quant INT,
+img VARCHAR(200),
 id_usuario serial REFERENCES Usuario(id_usuario),
 id_estado serial REFERENCES Estado(id_estado)
 );
